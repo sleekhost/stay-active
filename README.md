@@ -1,11 +1,12 @@
 <p align="center">
   <h1 align="center">stay-active</h1>
   <p align="center">
-    <strong>Keep Microsoft Teams (and other apps) showing you as "Active" on macOS and Windows</strong>
+    <strong>Keep Microsoft Teams (and other apps) showing you as "Active" on macOS, Linux, and Windows</strong>
   </p>
   <p align="center">
     <a href="https://www.apple.com/macos"><img src="https://img.shields.io/badge/macOS-10.13+-blue.svg?style=for-the-badge&logo=apple" alt="macOS"></a>
     <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Windows-10%2F11-0078D6.svg?style=for-the-badge&logo=windows" alt="Windows"></a>
+    <a href="https://www.linux.org"><img src="https://img.shields.io/badge/Linux-FCC624.svg?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License"></a>
     <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Shell-Bash-4EAA25.svg?style=for-the-badge&logo=gnu-bash&logoColor=white" alt="Bash"></a>
     <a href="https://learn.microsoft.com/powershell/"><img src="https://img.shields.io/badge/PowerShell-5.1+-5391FE.svg?style=for-the-badge&logo=powershell&logoColor=white" alt="PowerShell"></a>
@@ -55,6 +56,14 @@ curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/install.
 ```
 
 The installer handles everything: Homebrew, cliclick, PATH setup.
+
+### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/install-linux.sh | bash
+```
+
+Supports Ubuntu, Debian, Fedora, Arch, openSUSE and any distro with a supported package manager. Installs `xdotool` automatically.
 
 ### Windows
 
@@ -183,10 +192,18 @@ This mimics natural human behavior — no predictable patterns that could be fla
 
 | Requirement | Details |
 |-------------|---------|
-| **macOS** | 10.13 (High Sierra) or newer |
+| **macOS** | 10.13 (High Sierra) or newer — Intel and Apple Silicon (M1/M2/M3/M4) |
 | **Homebrew** | Package manager ([brew.sh](https://brew.sh)) |
 | **cliclick** | Mouse/keyboard automation (auto-installed) |
 | **Permissions** | Accessibility access for Terminal |
+
+### Linux
+
+| Requirement | Details |
+|-------------|---------|
+| **Linux** | Any modern distro (Ubuntu, Fedora, Arch, openSUSE…) |
+| **xdotool** | Mouse/keyboard automation (auto-installed by installer) |
+| **Display** | X11 display server (Wayland: set `DISPLAY` or use XWayland) |
 
 ### Windows
 
@@ -235,6 +252,12 @@ brew install cliclick
 curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/uninstall.sh | bash
 ```
 
+### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/uninstall-linux.sh | bash
+```
+
 <details>
 <summary><strong>macOS Manual uninstall</strong></summary>
 
@@ -278,7 +301,7 @@ Remove-Item "$env:LOCALAPPDATA\stay-active" -Recurse -Force
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Ideas:**
-- [ ] Linux support (xdotool)
+- [x] Linux support (xdotool)
 - [x] Windows support (PowerShell)
 - [ ] Configurable intervals
 - [ ] Schedule mode (work hours only)
