@@ -11,6 +11,10 @@ CONTROL_FILE="$HOME/.local/.stay_active_on"
 PID_FILE="$HOME/.local/.stay_active_pid"
 LOG_FILE="$HOME/.local/.stay_active_log"
 
+# Detect OS and CPU architecture
+OS="$(uname -s)"    # Darwin = macOS, Linux = Linux
+ARCH="$(uname -m)"  # arm64 = Apple Silicon (M1/M2/M3/M4), x86_64 = Intel
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -18,9 +22,19 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 show_help() {
+    if [ "$OS" = "Darwin" ]; then
+        OS_LINE="macOS 10.13+ (Intel and Apple Silicon)"
+        DEPS_LINE="cliclick (install via: brew install cliclick)"
+        EXTRA_LINE="    - Accessibility permissions for Terminal"
+    else
+        OS_LINE="Linux (Ubuntu, Fedora, Arch, and others)"
+        DEPS_LINE="xdotool (install via your package manager)"
+        EXTRA_LINE=""
+    fi
+
     cat << EOF
 stay-active v${VERSION}
-Keep Microsoft Teams (and other apps) showing you as "Active" on macOS
+Keep Microsoft Teams (and other apps) showing you as "Active"
 
 USAGE:
     stay-active <command>
@@ -48,9 +62,9 @@ HOW IT WORKS:
     Uses human-like patterns to avoid detection.
 
 REQUIREMENTS:
-    - macOS 10.13+
-    - cliclick (install via: brew install cliclick)
-    - Accessibility permissions for Terminal
+    - ${OS_LINE}
+    - ${DEPS_LINE}
+${EXTRA_LINE}
 
 AUTHOR:
     Sleekhost
@@ -75,24 +89,91 @@ get_random_offset() {
     echo $((RANDOM % 11 - 5))
 }
 
-check_cliclick() {
-    if ! command -v cliclick &> /dev/null; then
-        echo -e "${RED}Error: cliclick not found${NC}"
-        echo ""
-        echo "Install it with:"
-        echo "  brew install cliclick"
-        echo ""
-        echo "Then grant Accessibility permissions in:"
-        echo "  System Settings → Privacy & Security → Accessibility"
-        exit 1
-    fi
+# --- OS abstraction helpers ---
+
+check_deps() {
+    case "$OS" in
+        Darwin)
+            if ! command -v cliclick &> /dev/null; then
+                # Show the correct Homebrew path for this Mac's chip
+                if [ "$ARCH" = "arm64" ]; then
+                    CLICLICK_PATH="/opt/homebrew/bin/cliclick"
+                else
+                    CLICLICK_PATH="/usr/local/bin/cliclick"
+                fi
+                echo -e "${RED}Error: cliclick not found${NC}"
+                echo ""
+                echo "Install it with:"
+                echo "  brew install cliclick"
+                echo ""
+                echo "Then grant Accessibility permissions in:"
+                echo "  System Settings → Privacy & Security → Accessibility"
+                echo "  Add: Terminal (or your terminal app)"
+                echo "  Add: ${CLICLICK_PATH}"
+                exit 1
+            fi
+            ;;
+        Linux)
+            if ! command -v xdotool &> /dev/null; then
+                echo -e "${RED}Error: xdotool not found${NC}"
+                echo ""
+                echo "Install it with:"
+                echo "  Ubuntu/Debian:  sudo apt install xdotool"
+                echo "  Fedora/RHEL:    sudo dnf install xdotool"
+                echo "  Arch Linux:     sudo pacman -S xdotool"
+                echo "  openSUSE:       sudo zypper install xdotool"
+                exit 1
+            fi
+            ;;
+        *)
+            echo -e "${RED}Error: Unsupported OS: ${OS}${NC}"
+            echo "stay-active supports macOS and Linux."
+            exit 1
+            ;;
+    esac
 }
+
+# Returns current mouse position as "x,y"
+get_mouse_pos() {
+    case "$OS" in
+        Darwin)
+            cliclick p 2>/dev/null | grep -oE '[0-9]+,[0-9]+'
+            ;;
+        Linux)
+            local info
+            info=$(xdotool getmouselocation 2>/dev/null)
+            local x y
+            x=$(echo "$info" | grep -oP '(?<=x:)\d+')
+            y=$(echo "$info" | grep -oP '(?<=y:)\d+')
+            [ -n "$x" ] && [ -n "$y" ] && echo "${x},${y}"
+            ;;
+    esac
+}
+
+# Move mouse to x,y
+move_mouse() {
+    local x=$1 y=$2
+    case "$OS" in
+        Darwin) cliclick -e 30 m:${x},${y} 2>/dev/null ;;
+        Linux)  xdotool mousemove --sync "$x" "$y" 2>/dev/null ;;
+    esac
+}
+
+# Press and release Shift key (registers as activity without disrupting user)
+press_shift() {
+    case "$OS" in
+        Darwin) cliclick kd:shift ku:shift 2>/dev/null ;;
+        Linux)  xdotool key shift 2>/dev/null ;;
+    esac
+}
+
+# --- Core daemon ---
 
 simulate_activity() {
     log_msg "Daemon started (v${VERSION})"
 
     while [ -f "$CONTROL_FILE" ]; do
-        current_pos=$(cliclick p 2>/dev/null | grep -oE '[0-9]+,[0-9]+')
+        current_pos=$(get_mouse_pos)
 
         if [ -n "$current_pos" ]; then
             current_x=$(echo "$current_pos" | cut -d',' -f1)
@@ -107,20 +188,18 @@ simulate_activity() {
             [ $new_x -lt 10 ] && new_x=10
             [ $new_y -lt 10 ] && new_y=10
 
-            # Move mouse with easing (natural movement)
-            cliclick -e 30 m:$new_x,$new_y 2>/dev/null
+            move_mouse "$new_x" "$new_y"
 
             sleep 0.$((RANDOM % 3 + 1))
 
-            # Press and release shift key (registers as activity)
-            cliclick kd:shift ku:shift 2>/dev/null
+            press_shift
 
             log_msg "Activity: mouse ($current_x,$current_y)->($new_x,$new_y) + shift key"
 
             # 60% chance to move back (natural behavior)
             if [ $((RANDOM % 10)) -lt 6 ]; then
                 sleep 0.$((RANDOM % 5 + 1))
-                cliclick -e 30 m:$current_x,$current_y 2>/dev/null
+                move_mouse "$current_x" "$current_y"
             fi
         else
             log_msg "Warning: Could not get mouse position"
@@ -145,7 +224,7 @@ simulate_activity() {
 }
 
 start_daemon() {
-    check_cliclick
+    check_deps
 
     if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
         echo -e "${YELLOW}Already running${NC}"

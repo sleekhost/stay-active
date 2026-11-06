@@ -1,12 +1,15 @@
 <p align="center">
   <h1 align="center">stay-active</h1>
   <p align="center">
-    <strong>Keep Microsoft Teams (and other apps) showing you as "Active" on macOS</strong>
+    <strong>Keep Microsoft Teams (and other apps) showing you as "Active" on macOS, Linux, and Windows</strong>
   </p>
   <p align="center">
     <a href="https://www.apple.com/macos"><img src="https://img.shields.io/badge/macOS-10.13+-blue.svg?style=for-the-badge&logo=apple" alt="macOS"></a>
+    <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Windows-10%2F11-0078D6.svg?style=for-the-badge&logo=windows" alt="Windows"></a>
+    <a href="https://www.linux.org"><img src="https://img.shields.io/badge/Linux-FCC624.svg?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License"></a>
     <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Shell-Bash-4EAA25.svg?style=for-the-badge&logo=gnu-bash&logoColor=white" alt="Bash"></a>
+    <a href="https://learn.microsoft.com/powershell/"><img src="https://img.shields.io/badge/PowerShell-5.1+-5391FE.svg?style=for-the-badge&logo=powershell&logoColor=white" alt="PowerShell"></a>
   </p>
 </p>
 
@@ -46,14 +49,55 @@ This creates problems:
 
 ## Quick Install
 
+### macOS
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/install.sh | bash
 ```
 
-That's it! The installer handles everything: Homebrew, cliclick, PATH setup.
+The installer handles everything: Homebrew, cliclick, PATH setup.
+
+### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/install-linux.sh | bash
+```
+
+Supports Ubuntu, Debian, Fedora, Arch, openSUSE and any distro with a supported package manager. Installs `xdotool` automatically.
+
+### Windows
+
+```powershell
+irm https://raw.githubusercontent.com/sleekhost/stay-active/main/install.ps1 | iex
+```
+
+No external dependencies — uses the Win32 API built into Windows. If script execution is blocked, run this first:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
 
 <details>
-<summary><strong>Manual Installation</strong></summary>
+<summary><strong>Windows Manual Installation</strong></summary>
+
+```powershell
+# 1. Create bin directory
+New-Item -ItemType Directory -Path "$env:USERPROFILE\.local\bin" -Force
+
+# 2. Download script
+Invoke-WebRequest `
+  -Uri "https://raw.githubusercontent.com/sleekhost/stay-active/main/stay-active.ps1" `
+  -OutFile "$env:USERPROFILE\.local\bin\stay-active.ps1"
+
+# 3. Add to PATH (run once; restart terminal after)
+$p = [Environment]::GetEnvironmentVariable("PATH","User")
+[Environment]::SetEnvironmentVariable("PATH","$p;$env:USERPROFILE\.local\bin","User")
+```
+
+</details>
+
+<details>
+<summary><strong>macOS Manual Installation</strong></summary>
 
 ### 1. Install cliclick
 
@@ -88,6 +132,8 @@ source ~/.zshrc
 
 ## Usage
 
+### macOS
+
 ```bash
 stay-active start     # Start keeping you active
 stay-active stop      # Stop the daemon
@@ -97,10 +143,21 @@ stay-active log       # View activity log
 stay-active --help    # Show all commands
 ```
 
+### Windows
+
+```powershell
+.\stay-active.ps1 start     # Start keeping you active
+.\stay-active.ps1 stop      # Stop the daemon
+.\stay-active.ps1 toggle    # Toggle on/off
+.\stay-active.ps1 status    # Check if running
+.\stay-active.ps1 log       # View activity log
+.\stay-active.ps1 --help    # Show all commands
+```
+
 ### Example
 
-```bash
-$ stay-active start
+```
+$ stay-active start       (or .\stay-active.ps1 start on Windows)
 Started (PID: 12345)
 
 $ stay-active status
@@ -131,12 +188,30 @@ This mimics natural human behavior — no predictable patterns that could be fla
 
 ## Requirements
 
+### macOS
+
 | Requirement | Details |
 |-------------|---------|
-| **macOS** | 10.13 (High Sierra) or newer |
+| **macOS** | 10.13 (High Sierra) or newer — Intel and Apple Silicon (M1/M2/M3/M4) |
 | **Homebrew** | Package manager ([brew.sh](https://brew.sh)) |
 | **cliclick** | Mouse/keyboard automation (auto-installed) |
 | **Permissions** | Accessibility access for Terminal |
+
+### Linux
+
+| Requirement | Details |
+|-------------|---------|
+| **Linux** | Any modern distro (Ubuntu, Fedora, Arch, openSUSE…) |
+| **xdotool** | Mouse/keyboard automation (auto-installed by installer) |
+| **Display** | X11 display server (Wayland: set `DISPLAY` or use XWayland) |
+
+### Windows
+
+| Requirement | Details |
+|-------------|---------|
+| **Windows** | 10 or 11 |
+| **PowerShell** | 5.1+ (pre-installed on Windows 10/11) |
+| **Dependencies** | None — uses Win32 API built into Windows |
 
 ---
 
@@ -171,18 +246,42 @@ brew install cliclick
 
 ## Uninstall
 
+### macOS
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/uninstall.sh | bash
 ```
 
+### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleekhost/stay-active/main/uninstall-linux.sh | bash
+```
+
 <details>
-<summary><strong>Manual uninstall</strong></summary>
+<summary><strong>macOS Manual uninstall</strong></summary>
 
 ```bash
 stay-active stop
 rm ~/.local/bin/stay-active
 rm ~/.local/.stay_active_*
 brew uninstall cliclick  # optional
+```
+</details>
+
+### Windows
+
+```powershell
+irm https://raw.githubusercontent.com/sleekhost/stay-active/main/uninstall.ps1 | iex
+```
+
+<details>
+<summary><strong>Windows Manual uninstall</strong></summary>
+
+```powershell
+.\stay-active.ps1 stop
+Remove-Item "$env:USERPROFILE\.local\bin\stay-active.ps1" -Force
+Remove-Item "$env:LOCALAPPDATA\stay-active" -Recurse -Force
 ```
 </details>
 
@@ -202,8 +301,8 @@ brew uninstall cliclick  # optional
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Ideas:**
-- [ ] Linux support (xdotool)
-- [ ] Windows support (PowerShell)
+- [x] Linux support (xdotool)
+- [x] Windows support (PowerShell)
 - [ ] Configurable intervals
 - [ ] Schedule mode (work hours only)
 - [ ] Native menu bar app
